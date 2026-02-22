@@ -307,3 +307,55 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #4e4e4e;
 }
+
+/* Notification toast */
+.notification {
+  position: fixed;
+  top: 70px;
+  right: 20px;
+  padding: 12px 20px;
+  background-color: #0e639c;
+  color: white;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 2000;
+  animation: slideIn 0.3s ease-out;
+  max-width: 400px;
+}
+
+.notification.success {
+  background-color: #4ec9b0;
+  color: #1e1e1e;
+}
+
+.notification.error {
+  background-color: #f48771;
+  color: #1e1e1e;
+}
+
+.notification.warning {
+  background-color: #dcdcaa;
+  color: #1e1e1e;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Confirm dialog specific styles */
+.confirm-dialog {
+  min-width: 350px;
+}
+
+.confirm-dialog p {
+  margin: 15px 0 20px;
+  line-height: 1.5;
+  color: #d4d4d4;
+}

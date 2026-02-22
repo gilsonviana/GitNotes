@@ -18,6 +18,8 @@ function App() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [githubToken, setGithubToken] = useState('');
   const [showSettings, setShowSettings] = useState(false);
+  const [notification, setNotification] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState(null);
 
   // Check online status
   useEffect(() => {
@@ -32,6 +34,22 @@ function App() {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  // Auto-hide notifications after 3 seconds
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotification(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
+  const showNotification = (message, type = 'info') => {
+    setNotification({ message, type });
+  };
+
+  const showConfirm = (message, onConfirm) => {
+    setConfirmDialog({ message, onConfirm });
+  };
 
   // Load notes from local storage on mount
   useEffect(() => {
@@ -95,7 +113,7 @@ function App() {
       return noteData;
     } catch (error) {
       console.error('Error saving note:', error);
-      alert('Failed to save note');
+      showNotification('Failed to save note', 'error');
     }
   }, [markdown, currentFile]);
 
@@ -124,7 +142,7 @@ function App() {
 
   const openFile = async () => {
     if (!window.electron) {
-      alert('File operations are only available in the desktop app');
+      showNotification('File operations are only available in the desktop app', 'warning');
       return;
     }
 
@@ -139,13 +157,13 @@ function App() {
       }
     } catch (error) {
       console.error('Error opening file:', error);
-      alert('Failed to open file');
+      showNotification('Failed to open file', 'error');
     }
   };
 
   const saveFileAs = async () => {
     if (!window.electron) {
-      alert('File operations are only available in the desktop app');
+      showNotification('File operations are only available in the desktop app', 'warning');
       return;
     }
 
@@ -156,24 +174,24 @@ function App() {
         if (saveResult.success) {
           setCurrentFile(result.filePath);
         } else {
-          alert('Failed to save file');
+          showNotification('Failed to save file', 'error');
         }
       }
     } catch (error) {
       console.error('Error saving file:', error);
-      alert('Failed to save file');
+      showNotification('Failed to save file', 'error');
     }
   };
 
   const syncWithGitHub = async () => {
     if (!githubToken) {
-      alert('Please set your GitHub token in settings');
+      showNotification('Please set your GitHub token in settings', 'warning');
       setShowSettings(true);
       return;
     }
 
     if (!isOnline) {
-      alert('You are offline. Changes will sync when you are back online.');
+      showNotification('You are offline. Changes will sync when you are back online.', 'warning');
       return;
     }
 
@@ -185,10 +203,10 @@ function App() {
       // Simulate GitHub sync
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      alert('Synced with GitHub successfully!');
+      showNotification('Synced with GitHub successfully!', 'success');
     } catch (error) {
       console.error('Error syncing with GitHub:', error);
-      alert('Failed to sync with GitHub');
+      showNotification('Failed to sync with GitHub', 'error');
     } finally {
       setIsSyncing(false);
     }
@@ -198,32 +216,30 @@ function App() {
     try {
       await localforage.setItem('githubToken', githubToken);
       setShowSettings(false);
-      alert('Settings saved!');
+      showNotification('Settings saved!', 'success');
     } catch (error) {
       console.error('Error saving settings:', error);
-      alert('Failed to save settings');
+      showNotification('Failed to save settings', 'error');
     }
   };
 
   const deleteNote = async (noteId) => {
-    if (!confirm('Are you sure you want to delete this note?')) {
-      return;
-    }
+    showConfirm('Are you sure you want to delete this note?', async () => {
+      try {
+        await localforage.removeItem(`note_${noteId}`);
+        const notesList = await localforage.getItem('notesList') || [];
+        const updatedList = notesList.filter(n => n.id !== noteId);
+        await localforage.setItem('notesList', updatedList);
+        setNotes(updatedList);
 
-    try {
-      await localforage.removeItem(`note_${noteId}`);
-      const notesList = await localforage.getItem('notesList') || [];
-      const updatedList = notesList.filter(n => n.id !== noteId);
-      await localforage.setItem('notesList', updatedList);
-      setNotes(updatedList);
-
-      if (currentFile === noteId) {
-        newNote();
+        if (currentFile === noteId) {
+          newNote();
+        }
+      } catch (error) {
+        console.error('Error deleting note:', error);
+        showNotification('Failed to delete note', 'error');
       }
-    } catch (error) {
-      console.error('Error deleting note:', error);
-      alert('Failed to delete note');
-    }
+    });
   };
 
   return (
@@ -333,6 +349,32 @@ function App() {
               <button onClick={() => setShowSettings(false)}>Cancel</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {confirmDialog && (
+        <div className="modal-overlay" onClick={() => setConfirmDialog(null)}>
+          <div className="modal confirm-dialog" onClick={(e) => e.stopPropagation()}>
+            <h2>Confirm</h2>
+            <p>{confirmDialog.message}</p>
+            <div className="modal-actions">
+              <button 
+                onClick={() => {
+                  confirmDialog.onConfirm();
+                  setConfirmDialog(null);
+                }}
+              >
+                Confirm
+              </button>
+              <button onClick={() => setConfirmDialog(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {notification && (
+        <div className={`notification ${notification.type}`}>
+          {notification.message}
         </div>
       )}
     </div>
