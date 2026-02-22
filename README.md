@@ -2,6 +2,11 @@
 
 GitNotes is an intuitive Electron (React) app built to run on MacOS, designed to help boost software developers' productivity. It features a simple and lightweight interface to allow focus while relying on GitHub's power and safety features.
 
+## Screenshots
+
+![GitNotes Interface](docs/screenshot.png)
+*Clean, dark-themed interface with markdown editor and live preview*
+
 ## Features ✨
 
 - **Markdown Support**: Full markdown editor with live preview
