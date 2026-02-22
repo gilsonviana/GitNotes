@@ -79,6 +79,7 @@ The built app will be available in the `release` directory.
 
 - **Electron**: Cross-platform desktop framework
 - **React**: UI library for building the interface
+- **TypeScript**: Strongly-typed programming language
 - **Vite**: Fast build tool and dev server
 - **@uiw/react-md-editor**: Markdown editor component
 - **localforage**: Offline storage with IndexedDB
@@ -91,22 +92,28 @@ The built app will be available in the `release` directory.
 ```
 GitNotes/
 ├── electron/          # Electron main process
-│   ├── main.js       # Main Electron entry point
-│   └── preload.js    # Preload script for IPC
-├── src/              # React application
-│   ├── App.jsx       # Main App component
-│   ├── App.css       # App styles
-│   ├── main.jsx      # React entry point
-│   └── index.css     # Global styles
-├── public/           # Static assets
-├── index.html        # HTML template
-├── vite.config.js    # Vite configuration
-└── package.json      # Project dependencies and scripts
+│   ├── main.ts        # Main Electron entry point
+│   └── preload.ts     # Preload script for IPC
+├── src/               # React application
+│   ├── App.tsx        # Main App component
+│   ├── App.css        # App styles
+│   ├── main.tsx       # React entry point
+│   ├── index.css      # Global styles
+│   └── vite-env.d.ts  # TypeScript declarations
+├── public/            # Static assets
+├── index.html         # HTML template
+├── vite.config.ts     # Vite configuration
+├── tsconfig.json      # TypeScript configuration
+└── package.json       # Project dependencies and scripts
 ```
 
 ### Available Scripts
 
 - `npm run dev` - Start development server with hot reload
+- `npm run build` - Build the React app
+- `npm run build:mac` - Build MacOS application
+- `npm run preview` - Preview production build
+- `npm run typecheck` - Run TypeScript type checking
 - `npm run build` - Build the React app
 - `npm run build:mac` - Build MacOS application
 - `npm run preview` - Preview production build
