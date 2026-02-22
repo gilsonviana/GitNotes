@@ -114,9 +114,6 @@ GitNotes/
 - `npm run build:mac` - Build MacOS application
 - `npm run preview` - Preview production build
 - `npm run typecheck` - Run TypeScript type checking
-- `npm run build` - Build the React app
-- `npm run build:mac` - Build MacOS application
-- `npm run preview` - Preview production build
 
 ## Contributing 🤝
 
