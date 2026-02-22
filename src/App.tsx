@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import MDEditor from '@uiw/react-md-editor';
 import localforage from 'localforage';
 import './App.css';
@@ -10,16 +10,33 @@ localforage.config({
   description: 'Markdown notes storage'
 });
 
+interface Note {
+  id: string;
+  content: string;
+  updatedAt: string;
+  title: string;
+}
+
+interface Notification {
+  message: string;
+  type: 'info' | 'success' | 'error' | 'warning';
+}
+
+interface ConfirmDialog {
+  message: string;
+  onConfirm: () => void | Promise<void>;
+}
+
 function App() {
-  const [markdown, setMarkdown] = useState('# Welcome to GitNotes\n\nStart typing your notes here...');
-  const [currentFile, setCurrentFile] = useState(null);
-  const [notes, setNotes] = useState([]);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [githubToken, setGithubToken] = useState('');
-  const [showSettings, setShowSettings] = useState(false);
-  const [notification, setNotification] = useState(null);
-  const [confirmDialog, setConfirmDialog] = useState(null);
+  const [markdown, setMarkdown] = useState<string>('# Welcome to GitNotes\n\nStart typing your notes here...');
+  const [currentFile, setCurrentFile] = useState<string | null>(null);
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [githubToken, setGithubToken] = useState<string>('');
+  const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [notification, setNotification] = useState<Notification | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog | null>(null);
 
   // Check online status
   useEffect(() => {
@@ -43,11 +60,11 @@ function App() {
     }
   }, [notification]);
 
-  const showNotification = (message, type = 'info') => {
+  const showNotification = (message: string, type: Notification['type'] = 'info') => {
     setNotification({ message, type });
   };
 
-  const showConfirm = (message, onConfirm) => {
+  const showConfirm = (message: string, onConfirm: () => void | Promise<void>) => {
     setConfirmDialog({ message, onConfirm });
   };
 
@@ -55,11 +72,12 @@ function App() {
   useEffect(() => {
     loadNotes();
     loadSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadNotes = async () => {
     try {
-      const storedNotes = await localforage.getItem('notesList') || [];
+      const storedNotes = await localforage.getItem<Note[]>('notesList') || [];
       setNotes(storedNotes);
     } catch (error) {
       console.error('Error loading notes:', error);
@@ -68,17 +86,17 @@ function App() {
 
   const loadSettings = async () => {
     try {
-      const token = await localforage.getItem('githubToken');
+      const token = await localforage.getItem<string>('githubToken');
       if (token) setGithubToken(token);
     } catch (error) {
       console.error('Error loading settings:', error);
     }
   };
 
-  const saveNote = useCallback(async () => {
+  const saveNote = useCallback(async (): Promise<Note | undefined> => {
     try {
       const timestamp = new Date().toISOString();
-      const noteData = {
+      const noteData: Note = {
         id: currentFile || timestamp,
         content: markdown,
         updatedAt: timestamp,
@@ -89,7 +107,7 @@ function App() {
       await localforage.setItem(`note_${noteData.id}`, noteData);
 
       // Update notes list
-      const notesList = await localforage.getItem('notesList') || [];
+      const notesList = await localforage.getItem<Note[]>('notesList') || [];
       const existingIndex = notesList.findIndex(n => n.id === noteData.id);
       
       if (existingIndex >= 0) {
@@ -118,7 +136,7 @@ function App() {
     }
   }, [markdown, currentFile]);
 
-  const extractTitle = (content) => {
+  const extractTitle = (content: string): string => {
     const lines = content.split('\n');
     const firstLine = lines[0] || '';
     return firstLine.replace(/^#\s*/, '') || 'Untitled Note';
@@ -129,9 +147,9 @@ function App() {
     setCurrentFile(null);
   };
 
-  const loadNote = async (noteId) => {
+  const loadNote = async (noteId: string) => {
     try {
-      const note = await localforage.getItem(`note_${noteId}`);
+      const note = await localforage.getItem<Note>(`note_${noteId}`);
       if (note) {
         setMarkdown(note.content);
         setCurrentFile(note.id);
@@ -151,7 +169,7 @@ function App() {
       const result = await window.electron.openFileDialog();
       if (!result.canceled && result.filePath) {
         const fileData = await window.electron.readFile(result.filePath);
-        if (fileData.success) {
+        if (fileData.success && fileData.content) {
           setMarkdown(fileData.content);
           setCurrentFile(result.filePath);
         }
@@ -199,7 +217,7 @@ function App() {
     setIsSyncing(true);
     try {
       // This is a simplified example - in production you'd implement full GitHub API integration
-      const noteData = await saveNote();
+      await saveNote();
       
       // Simulate GitHub sync
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -224,11 +242,11 @@ function App() {
     }
   };
 
-  const deleteNote = async (noteId) => {
+  const deleteNote = async (noteId: string) => {
     showConfirm('Are you sure you want to delete this note?', async () => {
       try {
         await localforage.removeItem(`note_${noteId}`);
-        const notesList = await localforage.getItem('notesList') || [];
+        const notesList = await localforage.getItem<Note[]>('notesList') || [];
         const updatedList = notesList.filter(n => n.id !== noteId);
         await localforage.setItem('notesList', updatedList);
         setNotes(updatedList);
@@ -314,7 +332,7 @@ function App() {
         <div className="editor-container">
           <MDEditor
             value={markdown}
-            onChange={setMarkdown}
+            onChange={(value) => setMarkdown(value || '')}
             height="100%"
             preview="live"
             hideToolbar={false}

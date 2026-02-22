@@ -1,10 +1,10 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
-const path = require('path');
-const fs = require('fs').promises;
+import { app, BrowserWindow, ipcMain, dialog, IpcMainInvokeEvent } from 'electron';
+import path from 'path';
+import { promises as fs } from 'fs';
 
-let mainWindow;
+let mainWindow: BrowserWindow | null;
 
-function createWindow() {
+function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -47,25 +47,48 @@ app.on('activate', () => {
 });
 
 // IPC handlers for file operations
-ipcMain.handle('save-file', async (event, { filePath, content }) => {
+interface SaveFileArgs {
+  filePath: string;
+  content: string;
+}
+
+interface FileOperationResult {
+  success: boolean;
+  error?: string;
+}
+
+interface ReadFileResult extends FileOperationResult {
+  content?: string;
+}
+
+interface FileDialogResult {
+  canceled?: boolean;
+  filePath?: string;
+}
+
+ipcMain.handle('save-file', async (_event: IpcMainInvokeEvent, { filePath, content }: SaveFileArgs): Promise<FileOperationResult> => {
   try {
     await fs.writeFile(filePath, content, 'utf-8');
     return { success: true };
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: (error as Error).message };
   }
 });
 
-ipcMain.handle('read-file', async (event, filePath) => {
+ipcMain.handle('read-file', async (_event: IpcMainInvokeEvent, filePath: string): Promise<ReadFileResult> => {
   try {
     const content = await fs.readFile(filePath, 'utf-8');
     return { success: true, content };
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: (error as Error).message };
   }
 });
 
-ipcMain.handle('open-file-dialog', async () => {
+ipcMain.handle('open-file-dialog', async (): Promise<FileDialogResult> => {
+  if (!mainWindow) {
+    return { canceled: true };
+  }
+
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openFile'],
     filters: [
@@ -81,7 +104,11 @@ ipcMain.handle('open-file-dialog', async () => {
   return { filePath: result.filePaths[0] };
 });
 
-ipcMain.handle('save-file-dialog', async () => {
+ipcMain.handle('save-file-dialog', async (): Promise<FileDialogResult> => {
+  if (!mainWindow) {
+    return { canceled: true };
+  }
+
   const result = await dialog.showSaveDialog(mainWindow, {
     filters: [
       { name: 'Markdown', extensions: ['md'] },
