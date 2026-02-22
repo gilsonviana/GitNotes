@@ -102,8 +102,9 @@ function App() {
       setNotes(notesList);
       setCurrentFile(noteData.id);
 
-      // Also save to file system if electron API is available
-      if (window.electron && currentFile) {
+      // Also save to file system if electron API is available and currentFile is a valid file path
+      const isFilePath = currentFile && (currentFile.includes('/') || currentFile.includes('\\') || currentFile.endsWith('.md'));
+      if (window.electron && isFilePath) {
         const result = await window.electron.saveFile(currentFile, markdown);
         if (!result.success) {
           console.error('Error saving to file system:', result.error);
