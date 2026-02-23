@@ -25,10 +25,3 @@ export interface ElectronAPI {
   openFileDialog: () => Promise<FileDialogResult>;
   saveFileDialog: () => Promise<FileDialogResult>;
 }
-
-// Global type augmentation for window.electron
-declare global {
-  interface Window {
-    electron?: ElectronAPI;
-  }
-}
