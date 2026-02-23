@@ -68,31 +68,29 @@ function App() {
     setConfirmDialog({ message, onConfirm });
   };
 
-  // Load notes from local storage on mount
-  useEffect(() => {
-    loadNotes();
-    loadSettings();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const loadNotes = async () => {
+  const loadNotes = useCallback(async () => {
     try {
       const storedNotes = await localforage.getItem<Note[]>('notesList') || [];
       setNotes(storedNotes);
     } catch (error) {
       console.error('Error loading notes:', error);
     }
-  };
+  }, []);
 
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     try {
       const token = await localforage.getItem<string>('githubToken');
       if (token) setGithubToken(token);
     } catch (error) {
       console.error('Error loading settings:', error);
     }
-  };
+  }, []);
 
+  // Load notes from local storage on mount
+  useEffect(() => {
+    loadNotes();
+    loadSettings();
+  }, [loadNotes, loadSettings]);
   const saveNote = useCallback(async (): Promise<Note | undefined> => {
     try {
       const timestamp = new Date().toISOString();
