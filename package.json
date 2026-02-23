@@ -11,7 +11,10 @@
     "build:electron": "tsc --project tsconfig.node.json",
     "build:mac": "npm run build && electron-builder --mac",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
   },
   "repository": {
     "type": "git",
@@ -63,6 +66,9 @@
   },
   "devDependencies": {
     "@electron/rebuild": "^4.0.3",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/localforage": "^0.0.33",
     "@types/node": "^25.3.0",
     "@types/react": "^19.2.14",
@@ -71,10 +77,12 @@
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
     "electron-builder": "^26.8.1",
+    "jsdom": "^28.1.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
+    "vitest": "^4.0.18",
     "wait-on": "^9.0.4"
   }
 }
