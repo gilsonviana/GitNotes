@@ -1,33 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import MDEditor from '@uiw/react-md-editor';
-import localforage from 'localforage';
 import './App.css';
-
-// Configure localforage for offline storage
-localforage.config({
-  name: 'GitNotes',
-  storeName: 'notes',
-  description: 'Markdown notes storage'
-});
-
-interface Note {
-  id: string;
-  content: string;
-  updatedAt: string;
-  title: string;
-}
-
-interface Notification {
-  message: string;
-  type: 'info' | 'success' | 'error' | 'warning';
-}
-
-interface ConfirmDialog {
-  message: string;
-  onConfirm: () => void | Promise<void>;
-}
+import { Note } from './types';
+import { useLocalStorage } from './contexts/LocalStorageContext';
+import { useNotifications } from './hooks/useNotifications';
+import { useConfirmDialog } from './hooks/useConfirmDialog';
+import { useKeyboardShortcut } from './hooks/useKeyboardShortcut';
 
 function App() {
+  const storage = useLocalStorage();
+  const { notification, showNotification } = useNotifications();
+  const { confirmDialog, showConfirm, hideConfirm, handleConfirm } = useConfirmDialog();
+  
   const [markdown, setMarkdown] = useState<string>('# Welcome to GitNotes\n\nStart typing your notes here...');
   const [currentFile, setCurrentFile] = useState<string | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
@@ -35,8 +19,6 @@ function App() {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [githubToken, setGithubToken] = useState<string>('');
   const [showSettings, setShowSettings] = useState<boolean>(false);
-  const [notification, setNotification] = useState<Notification | null>(null);
-  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog | null>(null);
 
   // Check online status
   useEffect(() => {
@@ -52,45 +34,42 @@ function App() {
     };
   }, []);
 
-  // Auto-hide notifications after 3 seconds
-  useEffect(() => {
-    if (notification) {
-      const timer = setTimeout(() => setNotification(null), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [notification]);
-
-  const showNotification = (message: string, type: Notification['type'] = 'info') => {
-    setNotification({ message, type });
-  };
-
-  const showConfirm = (message: string, onConfirm: () => void | Promise<void>) => {
-    setConfirmDialog({ message, onConfirm });
-  };
+  // Keyboard shortcuts
+  useKeyboardShortcut('Escape', () => {
+    if (showSettings) setShowSettings(false);
+    if (confirmDialog) hideConfirm();
+  }, [showSettings, confirmDialog]);
 
   const loadNotes = useCallback(async () => {
     try {
-      const storedNotes = await localforage.getItem<Note[]>('notesList') || [];
+      const storedNotes = await storage.getNotesList();
       setNotes(storedNotes);
     } catch (error) {
       console.error('Error loading notes:', error);
     }
-  }, []);
+  }, [storage]);
 
   const loadSettings = useCallback(async () => {
     try {
-      const token = await localforage.getItem<string>('githubToken');
+      const token = await storage.getGithubToken();
       if (token) setGithubToken(token);
     } catch (error) {
       console.error('Error loading settings:', error);
     }
-  }, []);
+  }, [storage]);
 
   // Load notes from local storage on mount
   useEffect(() => {
     loadNotes();
     loadSettings();
   }, [loadNotes, loadSettings]);
+
+  const extractTitle = (content: string): string => {
+    const lines = content.split('\n');
+    const firstLine = lines[0] || '';
+    return firstLine.replace(/^#\s*/, '') || 'Untitled Note';
+  };
+
   const saveNote = useCallback(async (): Promise<Note | undefined> => {
     try {
       const timestamp = new Date().toISOString();
@@ -101,21 +80,10 @@ function App() {
         title: extractTitle(markdown)
       };
 
-      // Save to localforage
-      await localforage.setItem(`note_${noteData.id}`, noteData);
-
-      // Update notes list
-      const notesList = await localforage.getItem<Note[]>('notesList') || [];
-      const existingIndex = notesList.findIndex(n => n.id === noteData.id);
-      
-      if (existingIndex >= 0) {
-        notesList[existingIndex] = noteData;
-      } else {
-        notesList.push(noteData);
-      }
-
-      await localforage.setItem('notesList', notesList);
-      setNotes(notesList);
+      // Save to storage
+      await storage.saveNote(noteData);
+      const updatedNotes = await storage.updateNoteInList(noteData);
+      setNotes(updatedNotes);
       setCurrentFile(noteData.id);
 
       // Also save to file system if electron API is available and currentFile is a valid file path
@@ -124,6 +92,8 @@ function App() {
         const result = await window.electron.saveFile(currentFile, markdown);
         if (!result.success) {
           console.error('Error saving to file system:', result.error);
+          showNotification('Failed to save file to disk. Changes are saved locally only.', 'error');
+          throw new Error(result.error || 'Failed to save file to disk');
         }
       }
 
@@ -132,13 +102,7 @@ function App() {
       console.error('Error saving note:', error);
       showNotification('Failed to save note', 'error');
     }
-  }, [markdown, currentFile]);
-
-  const extractTitle = (content: string): string => {
-    const lines = content.split('\n');
-    const firstLine = lines[0] || '';
-    return firstLine.replace(/^#\s*/, '') || 'Untitled Note';
-  };
+  }, [markdown, currentFile, storage, showNotification]);
 
   const newNote = () => {
     setMarkdown('# New Note\n\nStart typing...');
@@ -147,7 +111,7 @@ function App() {
 
   const loadNote = async (noteId: string) => {
     try {
-      const note = await localforage.getItem<Note>(`note_${noteId}`);
+      const note = await storage.getNote(noteId);
       if (note) {
         setMarkdown(note.content);
         setCurrentFile(note.id);
@@ -200,6 +164,15 @@ function App() {
     }
   };
 
+  const isValidGithubTokenFormat = (token: string): boolean => {
+    return (
+      token.startsWith('ghp_') ||
+      token.startsWith('gho_') ||
+      token.startsWith('ghu_') ||
+      token.startsWith('ghs_')
+    );
+  };
+
   const syncWithGitHub = async () => {
     if (!githubToken) {
       showNotification('Please set your GitHub token in settings', 'warning');
@@ -230,8 +203,21 @@ function App() {
   };
 
   const saveSettings = async () => {
+    if (!githubToken) {
+      showNotification('GitHub token is required and cannot be empty.', 'warning');
+      return;
+    }
+
+    if (!isValidGithubTokenFormat(githubToken)) {
+      showNotification(
+        "Invalid GitHub token format. Tokens should start with 'ghp_', 'gho_', 'ghu_', or 'ghs_'.",
+        'error'
+      );
+      return;
+    }
+
     try {
-      await localforage.setItem('githubToken', githubToken);
+      await storage.saveGithubToken(githubToken);
       setShowSettings(false);
       showNotification('Settings saved!', 'success');
     } catch (error) {
@@ -243,11 +229,9 @@ function App() {
   const deleteNote = async (noteId: string) => {
     showConfirm('Are you sure you want to delete this note?', async () => {
       try {
-        await localforage.removeItem(`note_${noteId}`);
-        const notesList = await localforage.getItem<Note[]>('notesList') || [];
-        const updatedList = notesList.filter(n => n.id !== noteId);
-        await localforage.setItem('notesList', updatedList);
-        setNotes(updatedList);
+        await storage.deleteNote(noteId);
+        const updatedNotes = await storage.deleteNoteFromList(noteId);
+        setNotes(updatedNotes);
 
         if (currentFile === noteId) {
           newNote();
@@ -370,20 +354,15 @@ function App() {
       )}
 
       {confirmDialog && (
-        <div className="modal-overlay" onClick={() => setConfirmDialog(null)}>
+        <div className="modal-overlay" onClick={hideConfirm}>
           <div className="modal confirm-dialog" onClick={(e) => e.stopPropagation()}>
             <h2>Confirm</h2>
             <p>{confirmDialog.message}</p>
             <div className="modal-actions">
-              <button 
-                onClick={() => {
-                  confirmDialog.onConfirm();
-                  setConfirmDialog(null);
-                }}
-              >
+              <button onClick={handleConfirm}>
                 Confirm
               </button>
-              <button onClick={() => setConfirmDialog(null)}>Cancel</button>
+              <button onClick={hideConfirm}>Cancel</button>
             </div>
           </div>
         </div>
