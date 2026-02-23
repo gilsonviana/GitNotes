@@ -1,6 +1,6 @@
 {
   "name": "gitnotes",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "GitNotes - A simple and intuitive Electron (React) app for MacOS to boost software developers productivity with markdown notes and GitHub integration",
   "main": "dist-electron/electron/main.js",
   "scripts": {

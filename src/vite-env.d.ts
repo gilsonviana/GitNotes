@@ -1,25 +1,7 @@
 /// <reference types="vite/client" />
 
-interface FileOperationResult {
-  success: boolean;
-  error?: string;
-}
-
-interface ReadFileResult extends FileOperationResult {
-  content?: string;
-}
-
-interface FileDialogResult {
-  canceled?: boolean;
-  filePath?: string;
-}
-
-interface ElectronAPI {
-  saveFile: (filePath: string, content: string) => Promise<FileOperationResult>;
-  readFile: (filePath: string) => Promise<ReadFileResult>;
-  openFileDialog: () => Promise<FileDialogResult>;
-  saveFileDialog: () => Promise<FileDialogResult>;
-}
+// Re-export types from electron/types for use in React app
+import type { ElectronAPI } from '../electron/types';
 
 declare global {
   interface Window {

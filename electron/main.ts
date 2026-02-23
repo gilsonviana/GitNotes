@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, dialog, IpcMainInvokeEvent } from 'electron';
 import path from 'path';
 import { promises as fs } from 'fs';
+import type { SaveFileArgs, FileOperationResult, ReadFileResult, FileDialogResult } from './types';
 
 let mainWindow: BrowserWindow | null;
 
@@ -47,25 +48,6 @@ app.on('activate', () => {
 });
 
 // IPC handlers for file operations
-interface SaveFileArgs {
-  filePath: string;
-  content: string;
-}
-
-interface FileOperationResult {
-  success: boolean;
-  error?: string;
-}
-
-interface ReadFileResult extends FileOperationResult {
-  content?: string;
-}
-
-interface FileDialogResult {
-  canceled?: boolean;
-  filePath?: string;
-}
-
 ipcMain.handle('save-file', async (_event: IpcMainInvokeEvent, { filePath, content }: SaveFileArgs): Promise<FileOperationResult> => {
   try {
     await fs.writeFile(filePath, content, 'utf-8');
