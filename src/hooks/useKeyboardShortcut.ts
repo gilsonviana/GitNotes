@@ -1,16 +1,15 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 
-export const useKeyboardShortcut = (key: string, callback: () => void, deps: React.DependencyList = []) => {
+export const useKeyboardShortcut = (key: string, handler: () => void) => {
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    if (event.key === key) {
+      event.preventDefault();
+      handler();
+    }
+  }, [key, handler]);
+
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === key) {
-        event.preventDefault();
-        callback();
-      }
-    };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, ...deps]);
+  }, [handleKeyDown]);
 };

@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { LocalStorageService } from '../services/localStorage.service';
 import { StorageKey, Note } from '../types';
-import localforage from 'localforage';
 
 // Mock localforage
 vi.mock('localforage', () => ({
@@ -13,6 +12,9 @@ vi.mock('localforage', () => ({
     clear: vi.fn(),
   },
 }));
+
+// Import after mock
+import localforage from 'localforage';
 
 describe('LocalStorageService', () => {
   let service: LocalStorageService;
@@ -39,7 +41,7 @@ describe('LocalStorageService', () => {
     });
 
     it('should get a note', async () => {
-      vi.mocked(localforage.getItem).mockResolvedValue(mockNote);
+      (localforage.getItem as any).mockResolvedValue(mockNote);
       const result = await service.getNote('test-id');
       expect(localforage.getItem).toHaveBeenCalledWith('note_test-id');
       expect(result).toEqual(mockNote);
@@ -54,7 +56,7 @@ describe('LocalStorageService', () => {
   describe('Notes list operations', () => {
     it('should get notes list', async () => {
       const mockNotes = [mockNote];
-      vi.mocked(localforage.getItem).mockResolvedValue(mockNotes);
+      (localforage.getItem as any).mockResolvedValue(mockNotes);
       
       const result = await service.getNotesList();
       
@@ -63,7 +65,7 @@ describe('LocalStorageService', () => {
     });
 
     it('should return empty array when notes list is null', async () => {
-      vi.mocked(localforage.getItem).mockResolvedValue(null);
+      (localforage.getItem as any).mockResolvedValue(null);
       
       const result = await service.getNotesList();
       
@@ -80,7 +82,7 @@ describe('LocalStorageService', () => {
       const existingNotes = [{ ...mockNote, title: 'Old Title' }];
       const updatedNote = { ...mockNote, title: 'New Title' };
       
-      vi.mocked(localforage.getItem).mockResolvedValue(existingNotes);
+      (localforage.getItem as any).mockResolvedValue(existingNotes);
       
       const result = await service.updateNoteInList(updatedNote);
       
@@ -92,7 +94,7 @@ describe('LocalStorageService', () => {
     it('should add new note to list when not exists', async () => {
       const existingNotes: Note[] = [];
       
-      vi.mocked(localforage.getItem).mockResolvedValue(existingNotes);
+      (localforage.getItem as any).mockResolvedValue(existingNotes);
       
       const result = await service.updateNoteInList(mockNote);
       
@@ -104,7 +106,7 @@ describe('LocalStorageService', () => {
     it('should delete note from list', async () => {
       const existingNotes = [mockNote, { ...mockNote, id: 'other-id' }];
       
-      vi.mocked(localforage.getItem).mockResolvedValue(existingNotes);
+      (localforage.getItem as any).mockResolvedValue(existingNotes);
       
       const result = await service.deleteNoteFromList('test-id');
       
@@ -117,7 +119,7 @@ describe('LocalStorageService', () => {
   describe('GitHub token operations', () => {
     it('should get GitHub token', async () => {
       const mockToken = 'ghp_test123';
-      vi.mocked(localforage.getItem).mockResolvedValue(mockToken);
+      (localforage.getItem as any).mockResolvedValue(mockToken);
       
       const result = await service.getGithubToken();
       

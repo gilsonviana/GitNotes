@@ -35,10 +35,12 @@ function App() {
   }, []);
 
   // Keyboard shortcuts
-  useKeyboardShortcut('Escape', () => {
+  const handleEscape = useCallback(() => {
     if (showSettings) setShowSettings(false);
     if (confirmDialog) hideConfirm();
-  }, [showSettings, confirmDialog]);
+  }, [showSettings, confirmDialog, hideConfirm]);
+
+  useKeyboardShortcut('Escape', handleEscape);
 
   const loadNotes = useCallback(async () => {
     try {
@@ -91,9 +93,10 @@ function App() {
       if (window.electron && isFilePath) {
         const result = await window.electron.saveFile(currentFile, markdown);
         if (!result.success) {
-          console.error('Error saving to file system:', result.error);
+          const errorMsg = result.error || 'Unknown error occurred';
+          console.error('Error saving to file system:', errorMsg);
           showNotification('Failed to save file to disk. Changes are saved locally only.', 'error');
-          throw new Error(result.error || 'Failed to save file to disk');
+          throw new Error(errorMsg);
         }
       }
 
